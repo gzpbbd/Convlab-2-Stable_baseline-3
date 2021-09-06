@@ -1,0 +1,73 @@
+加快对话速度，加入 world model
+    1200 turns 对话:
+        使用 gpu: ts 128.08, policy.predict 0.431, env.step 0.119, vec(s) 0.209, vec(next_s) 0.211
+                 ts 121.70, policy.predict 0.444, env.step 0.100, vec(s) 0.212, vec(next_s) 0.214
+        不用 GPU: ts 118.21, policy.predict 0.452, env.step 0.088, vec(s) 0.218, vec(next_s) 0.216
+
+            加快 state_vec 速度：
+                1. 减少 state_vec 调用次数
+                2. 加快单次 state_vec 的速度
+                    state_vec 中主要是 “degree = self.pointer(state['belief_state'])” 费时间
+
+        减少 state_vec 调用次数
+            ts 72.25, policy.predict 0.365, env.step 0.167, vec(s) 0.085, vec(next_s) 0.345
+        加快单次 state_vec 的速度： 生成 degree 时，避免 db.query 内的 deepcopy
+            ts 49.65, policy.predict 0.515, env.step 0.282, vec(s) 0.022, vec(next_s) 0.120
+
+            加快 action_devectorize 速度：
+                98% 的时间在 dbs.query 中
+
+    多进程:
+        8: sample size 1207, time 11.82（3）
+        4： sample size 1210, time 10.77（6）
+        2: sample size 1162, time 11.92 (9)
+
+    多线程：
+
+
+user: RulePolicy; system: RuleDST+PPO
+
+user polocy.predict：接受字典 a，输出字典 s
+RuleDSTupdate: 接收字典 a，输出字典 s
+Environment: 接收字典 a，输出字典 s
+PPO.predict: 接收字典 s, 输出字典 a
+    self.vector.state_vectorize(state)
+    self.vector.action_devectorize(a)
+
+{'user_action': [['Inform', 'Train', 'none', 'none'], ['Inform', 'Train', 'Leave', '12:15'], ['Inform', 'Train', 'Depart', 'cambridge'], ['Inform', 'Train', 'Dest', 'kings lynn']], 'system_action': [], 'belief_state': {'police': {'book': {'booked': []}, 'semi': {}}, 'hotel': {'book': {'booked': [], 'people': '', 'day': '', 'stay': ''}, 'semi': {'name': '', 'area': '', 'parking': '', 'pricerange': '', 'stars': '', 'internet': '', 'type': ''}}, 'attraction': {'book': {'booked': []}, 'semi': {'type': '', 'name': '', 'area': ''}}, 'restaurant': {'book': {'booked': [], 'people': '', 'day': '', 'time': ''}, 'semi': {'food': '', 'pricerange': '', 'name': '', 'area': ''}}, 'hospital': {'book': {'booked': []}, 'semi': {'department': ''}}, 'taxi': {'book': {'booked': []}, 'semi': {'leaveAt': '', 'destination': '', 'departure': '', 'arriveBy': ''}}, 'train': {'book': {'booked': [], 'people': ''}, 'semi': {'leaveAt': '12:15', 'destination': 'kings lynn', 'day': '', 'arriveBy': '', 'departure': 'cambridge'}}}, 'request_state': {}, 'terminated': False, 'history': []}
+{'user_action': [['Inform', 'Train', 'none', 'none'], ['Inform', 'Train', 'Leave', '12:15'], ['Inform', 'Train', 'Depart', 'cambridge'], ['Inform', 'Train', 'Dest', 'kings lynn']], 'system_action': [['Inform', 'Attraction', 'Addr', 'park street'], ['Inform', 'Attraction', 'Addr', 'jesus lane'], ['Inform', 'Attraction', 'Area', 'east'], ['Inform', 'Attraction', 'Area', 'centre'], ['Inform', 'Attraction', 'Area', 'centre'], ['Inform', 'Attraction', 'Choice', '79'], ['Inform', 'Attraction', 'Fee', '?'], ['Inform', 'Attraction', 'Fee', '?'], ['Inform', 'Attraction', 'Name', 'abbey pool and astroturf pitch'], ['Inform', 'Attraction', 'Name', 'ballare'], ['Inform', 'Attraction', 'Post', 'cb58nt'], ['Inform', 'Attraction', 'Type', 'swimmingpool'], ['Inform', 'Attraction', 'Type', 'architecture'], ['Inform', 'Attraction', 'Type', 'nightclub'], ['Inform', 'Attraction', 'Type', 'museum'], ['NoOffer', 'Attraction', 'Type', ''], ['Recommend', 'Attraction', 'Addr', 'pool way, whitehill road, off newmarket road'], ['Recommend', 'Attraction', 'Addr', 'park street'], ['Recommend', 'Attraction', 'Fee', '?'], ['Request', 'Attraction', 'Price', '?'], ['Request', 'Attraction', 'Type', '?'], ['Select', 'Attraction', 'none', 'none'], ['Book', 'Booking', 'Name', 'none'], ['Book', 'Booking', 'People', 'none'], ['Book', 'Booking', 'Stay', 'none'], ['Inform', 'Booking', 'Day', 'monday'], ['Inform', 'Booking', 'People', 'none'], ['Inform', 'Booking', 'none', 'none'], ['NoBook', 'Booking', 'Name', '1'], ['NoBook', 'Booking', 'Time', '1'], ['Request', 'Booking', 'Day', '?'], ['Request', 'Booking', 'Stay', '?'], ['Inform', 'Hospital', 'Phone', '01223216297'], ['Inform', 'Hospital', 'Post', 'cb20qq'], ['Request', 'Hospital', 'Department', '?'], ['Inform', 'Hotel', 'Addr', '154 chesterton road'], ['Inform', 'Hotel', 'Choice', '33'], ['Inform', 'Hotel', 'Stars', '4'], ['Inform', 'Hotel', 'Stars', '4'], ['Inform', 'Hotel', 'Type', 'guesthouse'], ['Inform', 'Hotel', 'Type', 'guesthouse'], ['NoOffer', 'Hotel', 'Area', ''], ['NoOffer', 'Hotel', 'Price', ''], ['NoOffer', 'Hotel', 'Type', ''], ['NoOffer', 'Hotel', 'none', 'none'], ['Recommend', 'Hotel', 'Addr', '124 tenison road'], ['Recommend', 'Hotel', 'Area', 'east'], ['Recommend', 'Hotel', 'Name', 'a and b guest house'], ['Recommend', 'Hotel', 'Parking', 'no'], ['Recommend', 'Hotel', 'Stars', '4'], ['Request', 'Hotel', 'Internet', '?'], ['Request', 'Hotel', 'Stars', '?'], ['Select', 'Hotel', 'Price', 'moderate'], ['Inform', 'Police', 'Name', 'none'], ['Inform', 'Police', 'Post', 'cb11jg'], ['Inform', 'Restaurant', 'Addr', 'Finders Corner Newmarket Road'], ['Inform', 'Restaurant', 'Area', 'east'], ['Inform', 'Restaurant', 'Choice', '110'], ['Inform', 'Restaurant', 'Food', 'italian'], ['Inform', 'Restaurant', 'Food', 'international'], ['Inform', 'Restaurant', 'Food', 'indian'], ['Inform', 'Restaurant', 'Food', 'chinese'], ['Inform', 'Restaurant', 'Name', 'the missing sock'], ['Inform', 'Restaurant', 'Name', 'the good luck chinese food takeaway'], ['Inform', 'Restaurant', 'Phone', '01223323737'], ['Inform', 'Restaurant', 'Post', 'cb21ab'], ['Inform', 'Restaurant', 'Price', 'cheap'], ['Inform', 'Restaurant', 'Ref', '00000000'], ['Recommend', 'Restaurant', 'Area', 'centre'], ['Recommend', 'Restaurant', 'Name', 'pizza hut city centre'], ['Recommend', 'Restaurant', 'Phone', '01223323737'], ['Request', 'Restaurant', 'Area', '?'], ['Request', 'Restaurant', 'Price', '?'], ['Select', 'Restaurant', 'Area', 'centre'], ['Select', 'Restaurant', 'Area', 'east'], ['Select', 'Restaurant', 'Food', 'italian'], ['Select', 'Restaurant', 'Food', 'indian'], ['Select', 'Restaurant', 'Price', 'cheap'], ['Request', 'Taxi', 'Depart', '?'], ['Request', 'Taxi', 'Leave', '?'], ['Inform', 'Train', 'Arrive', '13:58'], ['Inform', 'Train', 'Choice', '77'], ['Inform', 'Train', 'Day', 'monday'], ['Inform', 'Train', 'Leave', '13:11'], ['Inform', 'Train', 'Leave', '15:11'], ['Inform', 'Train', 'Time', '47 minutes'], ['OfferBook', 'Train', 'Id', 'TR0793'], ['OfferBooked', 'Train', 'Arrive', '13:58'], ['OfferBooked', 'Train', 'Dest', 'kings lynn'], ['OfferBooked', 'Train', 'Leave', '13:11'], ['OfferBooked', 'Train', 'People', 'none'], ['Request', 'Train', 'Arrive', '?'], ['Request', 'Train', 'Dest', '?'], ['Request', 'Train', 'People', '?'], ['bye', 'general', 'none', 'none'], ['reqmore', 'general', 'none', 'none'], ['welcome', 'general', 'none', 'none']], 'belief_state': {'police': {'book': {'booked': []}, 'semi': {}}, 'hotel': {'book': {'booked': [], 'people': '', 'day': '', 'stay': ''}, 'semi': {'name': '', 'area': '', 'parking': '', 'pricerange': '', 'stars': '', 'internet': '', 'type': ''}}, 'attraction': {'book': {'booked': []}, 'semi': {'type': '', 'name': '', 'area': ''}}, 'restaurant': {'book': {'booked': [], 'people': '', 'day': '', 'time': ''}, 'semi': {'food': '', 'pricerange': '', 'name': '', 'area': ''}}, 'hospital': {'book': {'booked': []}, 'semi': {'department': ''}}, 'taxi': {'book': {'booked': []}, 'semi': {'leaveAt': '', 'destination': '', 'departure': '', 'arriveBy': ''}}, 'train': {'book': {'booked': [], 'people': ''}, 'semi': {'leaveAt': '12:15', 'destination': 'kings lynn', 'day': '', 'arriveBy': '', 'departure': 'cambridge'}}}, 'request_state': {}, 'terminated': False, 'history': []}
+
+BUG：
+    注意 convlab2 中的 Policy.predict 会改变传入的 state['system_action']，所以传入之前的 state 需要深度拷贝一份保存起来。
+
+goal: sess.evaluator.goal
+complete_num(task_complete): sess.user_agent.policy.policy.goal.task_complete()
+suc_num(task_success): sess.evaluator.task_success()
+match(book rate): sess.evaluator.book_rate()
+inform precision: sess.evaluator.inform_F1()[0]
+inform recall: sess.evaluator.inform_F1()[1]
+inform f1: sess.evaluator.inform_F1()[2]
+num_domains_satisfying_constraints: len(sess.evaluator.goal) * sess.evaluator.final_goal_analyze()
+num_dialogs_satisfying_constraints: (sess.evaluator.final_goal_analyze() == 1)
+
+Analyzer:
+    filed:
+        sess = BiSession(sys_agent=sys_agent, user_agent=self.user_agent, kb_query=None, evaluator=evaluator)
+
+BiSession:
+    filed:
+        sys_agent
+        user_agent
+        evaluator
+    method:
+        init_session: 调用 user 与 system 的 init_session，设置 self.evaluator.goal
+        next_turn:
+
+MultiWozEvaluator:
+    filed:
+        goal: dialog goal
+    method:
+        add_goal
+        add_sys_da
+        add_usr_da
+        get_reward
