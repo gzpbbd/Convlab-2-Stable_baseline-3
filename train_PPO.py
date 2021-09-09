@@ -192,10 +192,9 @@ if __name__ == '__main__':
     evaluator = MultiWozEvaluator()
     env = Environment(None, simulator, None, dst_sys, evaluator)
 
-
     tmp = time.time()
     for i in range(args.epoch):
         logging.debug('epoch {}'.format(i))
         update(env, policy_sys, args.batchsz, i, args.process_num)
     total_time = int(time.time() - tmp)
-    logging.debug('total time {:02}:{:02}:{:02}'.format(total_time // 3600, total_time // 60, total_time % 60))
+    logging.debug('total time {:02}:{:02}:{:02}'.format(total_time // 3600, total_time % 3600 // 60, total_time % 60))

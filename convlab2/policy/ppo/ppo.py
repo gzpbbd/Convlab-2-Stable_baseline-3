@@ -218,14 +218,20 @@ class PPO(Policy):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        val_filename = directory + '/' + str(epoch) + '_ppo.val.mdl'
-        pol_filename = directory + '/' + str(epoch) + '_ppo.pol.mdl'
+        val_filename = os.path.join(directory, '{:04}_ppo.val.mdl'.format(epoch))
+        pol_filename = os.path.join(directory, '{:04}_ppo.pol.mdl'.format(epoch))
         torch.save(self.value.state_dict(), val_filename)
         torch.save(self.policy.state_dict(), pol_filename)
 
         logging.info('<<dialog policy>> epoch {}: saved network to {} and {}'.format(epoch, val_filename, pol_filename))
 
     def load(self, filename):
+        '''
+        加载 policy 与  value 模型
+
+        :param filename: 文件名（末尾不用加 .val.mdl 和 .pol.mdl）
+        :return:
+        '''
         value_mdl_candidates = [
             filename + '.val.mdl',
             filename + '_ppo.val.mdl',
